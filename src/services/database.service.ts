@@ -11,16 +11,22 @@ let pool: pg.Pool | null = null;
  * Get database configuration from environment variables
  */
 export function getDbConfig(): DbConfig {
-  return {
+  const config: DbConfig = {
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || '',
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT || 5432),
-    database: process.env.DB_DATABASE || 'matrix_sql',
-    ssl: {
-      rejectUnauthorized: false // 开发环境设置为 false，生产环境建议设置为 true
-    }
+    database: process.env.DB_DATABASE || 'matrix_sql'
   };
+
+  // 只有在环境变量明确设置为 'true' 时才启用SSL
+  if (process.env.DB_SSL === 'true') {
+    config.ssl = {
+      rejectUnauthorized: false
+    };
+  }
+
+  return config;
 }
 
 /**
