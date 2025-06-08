@@ -42,6 +42,16 @@ export function initDbPool(config?: DbConfig): pg.Pool {
   pool.on('error', (err) => {
     console.error('Unexpected database error:', err);
   });
+
+  // Set search path on each new connection
+  pool.on('connect', async (client) => {
+    try {
+      await client.query('SET search_path TO public, "Cyberpunk", "Fantasy", "RealWorld"');
+      console.log('Database search path set to include all schemas');
+    } catch (error) {
+      console.error('Failed to set database search path:', error);
+    }
+  });
   
   return pool;
 }

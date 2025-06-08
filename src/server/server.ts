@@ -2,6 +2,8 @@ import express from 'express';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import https from 'https';
+import fs from 'fs';
 import apiRoutes from './routes/api.routes';
 import { errorMiddleware } from './middleware/error.middleware';
 import { initDbPool } from '../services/database.service';
@@ -58,9 +60,34 @@ export async function startServer(port: number): Promise<void> {
   
   // Start server
   return new Promise((resolve) => {
-    app.listen(port, '0.0.0.0', () => {
-      console.log(`Server running on http://0.0.0.0:${port}`);
-      resolve();
-    });
+    const useHttps = process.env.USE_HTTPS === 'true';
+    
+    if (useHttps) {
+      // HTTPS server setup
+      try {
+        const privateKey = fs.readFileSync(process.env.SSL_KEY_PATH || './ssl/key.pem', 'utf8');
+        const certificate = fs.readFileSync(process.env.SSL_CERT_PATH || './ssl/cert.pem', 'utf8');
+        const credentials = { key: privateKey, cert: certificate };
+        
+        const httpsServer = https.createServer(credentials, app);
+        httpsServer.listen(port, '0.0.0.0', () => {
+          console.log(`HTTPS Server running on https://0.0.0.0:${port}`);
+          resolve();
+        });
+      } catch (err) {
+        console.error('HTTPS setup failed, falling back to HTTP:', err);
+        // Fallback to HTTP
+        app.listen(port, '0.0.0.0', () => {
+          console.log(`HTTP Server running on http://0.0.0.0:${port}`);
+          resolve();
+        });
+      }
+    } else {
+      // HTTP server setup
+      app.listen(port, '0.0.0.0', () => {
+        console.log(`HTTP Server running on http://0.0.0.0:${port}`);
+        resolve();
+      });
+    }
   });
 }
